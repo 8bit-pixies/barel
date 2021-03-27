@@ -1,0 +1,4 @@
+vowpalwabbit
+black
+numpy
+scikit-learn
