@@ -5,6 +5,7 @@ doing batch rl.
 
 from vowpalwabbit import pyvw
 import pandas as pd
+import numpy as np
 
 
 def to_vw_instance_format(context, action=None, reward=None, proba=None, feature_names=None):

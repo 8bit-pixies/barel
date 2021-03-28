@@ -9,6 +9,7 @@ import random
 import numpy as np
 from barel.policy.vw import ContextualBandit
 from barel.metric import Metric
+from barel.rollout import rollout
 
 
 column_names = [
@@ -37,10 +38,47 @@ column_names = [
     "habitat",
 ]
 
-feature_set = [x for x in column_names if x != "classes"]
-actions = list(set(data["classes"].to_list())) + ["s"]
+
+class Mushroom(object):
+    data = pd.read_csv("examples/agaricus-lepiota.data", header=None, names=column_names)
+    feature_set = [x for x in column_names if x != "classes"]
+    actions = list(set(data["classes"].to_list())) + ["s"]
+    action_mapping = {x: y + 1 for y, x in enumerate(actions)}
+    reverse_mapping = {y: x for x, y in action_mapping.items()}
+    max_cycle = 100
+
+    def get_mushroom(self):
+        self.sample = data.loc[random.choice(list(self.data.index))]
+        X = self.sample[feature_set]
+        self.label = self.sample["classes"]
+        return X
+
+    def get_reward(self, act):
+        if act == "s":
+            return random.choice([0, 1])
+        if act == "e" and self.label == "p":
+            self.cycle = 100
+            return 0
+        else:
+            return 1
+
+    def reset(self):
+        self.cycle = 0
+        return self.get_mushroom()
+
+    def step(self, action):
+        act = self.reverse_mapping[action + 1]
+        reward = self.get_reward(act)
+        obs = self.get_mushroom()
+        self.cycle += 1
+        done = self.cycle >= self.max_cycle
+        return obs, reward, done, {}
+
 
 data = pd.read_csv("examples/agaricus-lepiota.data", header=None, names=column_names)
+
+feature_set = [x for x in column_names if x != "classes"]
+actions = list(set(data["classes"].to_list())) + ["s"]
 
 # build an offline training set from random sample
 train_sample = data.iloc[random.sample(list(data.index), 100)]
@@ -56,8 +94,10 @@ train_sample["action"] = [{x: y + 1 for y, x in enumerate(actions)}[x] for x in 
 
 # create thing.
 policy = ContextualBandit(3, feature_set, return_proba=True)
+metric = Metric()
 
 for i in train_sample.index:
     X = train_sample.loc[i, feature_set]
     y = train_sample.loc[i, ["action", "reward", "probability"]]
     policy.learn_one(X.to_dict(), *y.to_list())
+    metric.update(rollout(Mushroom(), policy))
