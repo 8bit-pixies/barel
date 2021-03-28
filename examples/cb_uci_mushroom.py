@@ -6,51 +6,28 @@ https://arxiv.org/pdf/1807.09809.pdf
 
 import pandas as pd
 import random
+import json
 import numpy as np
 from barel.policy.vw import ContextualBandit
 from barel.metric import Metric
 from barel.rollout import rollout
 
-
-column_names = [
-    "classes",
-    "cap_shape",
-    "cap_surface",
-    "cap_color",
-    "bruises",
-    "odor",
-    "gill_attachment",
-    "gill_spacing",
-    "gill_size",
-    "gill_color",
-    "stalk_shape",
-    "stalk_root",
-    "stalk_surface_above_ring",
-    "stalk_surface_below_ring",
-    "stalk_color_above_ring",
-    "stalk_color_below_ring",
-    "veil_type",
-    "veil_color",
-    "ring_number",
-    "ring_type",
-    "spore_print_color",
-    "population",
-    "habitat",
-]
+with open("examples/mushroom.json", 'r') as f:
+    data = json.load(f)
 
 
 class Mushroom(object):
-    data = pd.read_csv("examples/agaricus-lepiota.data", header=None, names=column_names)
-    feature_set = [x for x in column_names if x != "classes"]
-    actions = list(set(data["classes"].to_list())) + ["s"]
-    action_mapping = {x: y + 1 for y, x in enumerate(actions)}
-    reverse_mapping = {y: x for x, y in action_mapping.items()}
+    actions = data['actions']
+    action_mapping = data["action_mapping"]
+    reverse_mapping = data["reverse_mapping"]
+    labels = data["y_test"]
+    data = pd.DataFrame(data["X_test"])
     max_cycle = 100
 
     def get_mushroom(self):
-        self.sample = data.loc[random.choice(list(self.data.index))]
-        X = self.sample[feature_set]
-        self.label = self.sample["classes"]
+        indx = int(random.choice(range(len(self.data.index))))
+        X = self.data.iloc[indx]
+        self.label = self.labels[indx]
         return X
 
     def get_reward(self, act):
@@ -67,7 +44,7 @@ class Mushroom(object):
         return self.get_mushroom()
 
     def step(self, action):
-        act = self.reverse_mapping[action + 1]
+        act = self.reverse_mapping[str(action)]
         reward = self.get_reward(act)
         obs = self.get_mushroom()
         self.cycle += 1
@@ -75,29 +52,16 @@ class Mushroom(object):
         return obs, reward, done, {}
 
 
-data = pd.read_csv("examples/agaricus-lepiota.data", header=None, names=column_names)
-
-feature_set = [x for x in column_names if x != "classes"]
-actions = list(set(data["classes"].to_list())) + ["s"]
-
-# build an offline training set from random sample
-train_sample = data.iloc[random.sample(list(data.index), 100)]
-chosen_actions = [random.choice(actions) for _ in range(100)]
-
-train_sample["actions"] = chosen_actions
-train_sample["probability"] = 0.33
-train_sample[["reward"]] = list((train_sample["classes"] == train_sample["actions"]).astype(float))
-train_sample[train_sample["actions"] == "s"]["reward"] = [
-    random.choice([0, 1]) for _ in range(np.sum(train_sample["actions"] == "s"))
-]
-train_sample["action"] = [{x: y + 1 for y, x in enumerate(actions)}[x] for x in train_sample["actions"].to_list()]
-
 # create thing.
-policy = ContextualBandit(3, feature_set, return_proba=True)
+policy = ContextualBandit(3, return_proba=True)
 metric = Metric()
+X_train = pd.DataFrame(data['X'])
+y_train = pd.DataFrame(data['y'])
 
-for i in train_sample.index:
-    X = train_sample.loc[i, feature_set]
-    y = train_sample.loc[i, ["action", "reward", "probability"]]
+for i in X_train.index:
+    X = X_train.loc[i][data['feature_set']]
+    y = y_train.loc[i][["action", "reward", "probability"]]
     policy.learn_one(X.to_dict(), *y.to_list())
-    metric.update(rollout(Mushroom(), policy))
+    for _ in range(10):
+        metric.add(rollout(Mushroom(), policy))
+    metric.update()

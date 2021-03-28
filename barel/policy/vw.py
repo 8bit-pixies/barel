@@ -21,6 +21,8 @@ def to_vw_instance_format(context, action=None, reward=None, proba=None, feature
 
     if action is not None:
         cost = -reward
+        action = action + 1 # vw is 1 indexed
+        action = int(action)
         vw_label = f"{action}:{cost}:{proba}"
     else:
         vw_label = ""
@@ -91,7 +93,7 @@ class ContextualBandit(object):
         action = self.model.predict(instance)
 
         if self.return_proba:
-            action = np.argmax(action)  # vw is 1 index
+            action = np.argmax(action)  # vw is 1 index doing argmax makes it what we expect
         else:
             action = action - 1  # vw is 1 index
         return action
