@@ -2,7 +2,7 @@
 This is to re-format the data for offline learning
 to simplify the scripts
 
-We will provide a training dataset
+We will provide a training dataset.
 """
 
 import json
@@ -61,7 +61,7 @@ y = train_sample[["action", "reward", "probability"]]
 
 test_sample = data.iloc[[x for x in data.index if x not in train_index]]
 X_test = test_sample[feature_set]
-y_test =  [action_mapping[x] for x in test_sample["classes"].to_list()]  # this is typically dependent on the environment
+y_test = [action_mapping[x] for x in test_sample["classes"].to_list()]  # this is typically dependent on the environment
 
 # export.
 
@@ -74,7 +74,7 @@ data = {
     "action_mapping": action_mapping,
     "reverse_mapping": reverse_mapping,
     "column_names": column_names,
-    "feature_set": feature_set
+    "feature_set": feature_set,
 }
 
 with open("examples/mushroom.json", "w") as outfile:

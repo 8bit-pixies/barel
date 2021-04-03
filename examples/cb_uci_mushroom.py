@@ -12,12 +12,18 @@ from barel.policy.vw import ContextualBandit
 from barel.metric import Metric
 from barel.rollout import rollout
 
-with open("examples/mushroom.json", 'r') as f:
+with open("examples/mushroom.json", "r") as f:
     data = json.load(f)
 
 
 class Mushroom(object):
-    actions = data['actions']
+    """
+    Notice that although we've put this in a gym format
+    there isn't a concept of a transition probability between
+    states
+    """
+
+    actions = data["actions"]
     action_mapping = data["action_mapping"]
     reverse_mapping = data["reverse_mapping"]
     labels = data["y_test"]
@@ -55,11 +61,11 @@ class Mushroom(object):
 # create thing.
 policy = ContextualBandit(3, return_proba=True)
 metric = Metric()
-X_train = pd.DataFrame(data['X'])
-y_train = pd.DataFrame(data['y'])
+X_train = pd.DataFrame(data["X"])
+y_train = pd.DataFrame(data["y"])
 
 for i in X_train.index:
-    X = X_train.loc[i][data['feature_set']]
+    X = X_train.loc[i][data["feature_set"]]
     y = y_train.loc[i][["action", "reward", "probability"]]
     policy.learn_one(X.to_dict(), *y.to_list())
     for _ in range(10):

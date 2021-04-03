@@ -46,7 +46,7 @@ for context, action, reward, proba in dataset:
 
 **Markov Decision Process**
 
-If we extend the ideas from vowpal wabbit to MDPs, then perhaps the policy should be trained on a trajectory basis rather than each individual state. This becomes more apparent if the policy leverages GRUs (n.b. I know that with the correct representation you don't need whole trajectories to train GRU-style models).
+If we extend the ideas from vowpal wabbit to MDPs, then perhaps the policy should be trained on a trajectory basis rather than each individual state. This becomes more apparent if the policy leverages GRUs (n.b. I know that with the correct representation you don't need whole trajectories to train GRU-style models - this is a future item).
 
 ```py
 from barel import policy
@@ -63,6 +63,17 @@ for trajectory in dataset:
     policy.learn_one(trajectory)
     # policy.get_action(state)
 
+```
+
+For non-trajectory approaches it should look like this:
+
+```py
+from barel import policy
+from barel import rollout
+from barel import metric
+
+for state, action, reward, next_state in dataset:
+    policy.learn_one(state, action, reward, next_state)
 ```
 
 
